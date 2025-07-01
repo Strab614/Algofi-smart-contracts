@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  algofi-tracker-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: algofi-tracker-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    environment:
+      - NODE_ENV=development
+      - PORT=8000
+      - FRONTEND_PORT=3000
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - .:/app:cached
+      - /app/node_modules
+      - /app/server/node_modules
+      - algofi-dev-logs:/app/logs
+    networks:
+      - algofi-dev-network
+    stdin_open: true
+    tty: true
+
+networks:
+  algofi-dev-network:
+    driver: bridge
+    name: algofi-dev-network
+
+volumes:
+  algofi-dev-logs:
+    driver: local
