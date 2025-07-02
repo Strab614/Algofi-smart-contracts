@@ -9,7 +9,8 @@
     "server": "cd server && npm install && npm start",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "npm run dev"
+    "start": "npm run dev",
+    "install:all": "npm install && cd server && npm install"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -25,7 +26,7 @@
     "framer-motion": "^10.16.0",
     "react-hot-toast": "^2.4.1",
     "zustand": "^4.4.0",
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

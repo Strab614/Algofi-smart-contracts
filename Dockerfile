@@ -3,7 +3,7 @@ FROM node:18-alpine AS base
 
 # Install security updates and required packages
 RUN apk update && apk upgrade && \
-    apk add --no-cache dumb-init && \
+    apk add --no-cache dumb-init curl && \
     rm -rf /var/cache/apk/*
 
 # Create non-root user for security
@@ -13,16 +13,24 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy package files for dependency installation
-COPY package*.json ./
-COPY server/package*.json ./server/
-
 # Development stage
 FROM base AS development
 ENV NODE_ENV=development
-RUN npm ci --include=dev
-RUN cd server && npm ci --include=dev
+
+# Copy package files first for better caching
+COPY package*.json ./
+COPY server/package*.json ./server/
+
+# Install all dependencies (including dev dependencies)
+RUN npm install && npm cache clean --force
+RUN cd server && npm install && npm cache clean --force
+
+# Copy source code
 COPY . .
+
+# Change ownership to non-root user
+RUN chown -R algofi:nodejs /app
+
 EXPOSE 3000 8000
 USER algofi
 CMD ["npm", "run", "dev"]
@@ -31,9 +39,13 @@ CMD ["npm", "run", "dev"]
 FROM base AS builder
 ENV NODE_ENV=production
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-RUN cd server && npm ci --only=production && npm cache clean --force
+# Copy package files
+COPY package*.json ./
+COPY server/package*.json ./server/
+
+# Install dependencies using npm install instead of npm ci to avoid lock file issues
+RUN npm install --only=production && npm cache clean --force
+RUN cd server && npm install --only=production && npm cache clean --force
 
 # Copy source code
 COPY . .
@@ -44,9 +56,9 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine AS production
 
-# Install security updates
+# Install security updates and required packages
 RUN apk update && apk upgrade && \
-    apk add --no-cache dumb-init && \
+    apk add --no-cache dumb-init curl && \
     rm -rf /var/cache/apk/*
 
 # Create non-root user
@@ -56,22 +68,27 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy built application and dependencies
+# Copy built application and dependencies from builder stage
 COPY --from=builder --chown=algofi:nodejs /app/dist ./dist
 COPY --from=builder --chown=algofi:nodejs /app/server ./server
 COPY --from=builder --chown=algofi:nodejs /app/package*.json ./
 COPY --from=builder --chown=algofi:nodejs /app/public ./public
-
-# Install production dependencies only
-RUN npm ci --only=production && npm cache clean --force
+COPY --from=builder --chown=algofi:nodejs /app/node_modules ./node_modules
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=8000
 ENV FRONTEND_PORT=3000
 
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R algofi:nodejs /app/logs
+
 # Expose ports
 EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Use non-root user
 USER algofi

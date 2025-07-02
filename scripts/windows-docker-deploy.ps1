@@ -165,6 +165,16 @@ if ($missingFiles.Count -gt 0) {
 Write-ColorOutput "✅ All required files found" $SuccessColor
 Write-ColorOutput ""
 
+# Clean up any existing containers
+Write-ColorOutput "🧹 Cleaning up existing containers..." $InfoColor
+try {
+    docker-compose down --remove-orphans 2>$null | Out-Null
+    docker-compose -f docker-compose.dev.yml down --remove-orphans 2>$null | Out-Null
+    Write-ColorOutput "✅ Cleanup completed" $SuccessColor
+} catch {
+    Write-ColorOutput "ℹ️ No existing containers to clean up" $InfoColor
+}
+
 # Create Docker network
 Write-ColorOutput "🌐 Creating Docker network..." $InfoColor
 try {
@@ -181,13 +191,13 @@ Write-ColorOutput "This may take a few minutes on first run..." $WarningColor
 try {
     if ($Mode -eq "development") {
         Write-ColorOutput "🔧 Building development image..." $InfoColor
-        docker build --target development -t algofi-tracker:dev .
+        docker-compose -f docker-compose.dev.yml build --no-cache
         if ($LASTEXITCODE -ne 0) {
             throw "Development build failed"
         }
     } else {
         Write-ColorOutput "🏭 Building production image..." $InfoColor
-        docker build --target production -t algofi-tracker:latest .
+        docker-compose build --no-cache
         if ($LASTEXITCODE -ne 0) {
             throw "Production build failed"
         }
@@ -195,6 +205,7 @@ try {
     Write-ColorOutput "✅ Docker images built successfully" $SuccessColor
 } catch {
     Write-ColorOutput "❌ Failed to build Docker images: $_" $ErrorColor
+    Write-ColorOutput "Try running: docker system prune -f" $WarningColor
     exit 1
 }
 
