@@ -37,20 +37,21 @@ CMD ["npm", "run", "dev"]
 
 # Build stage for production
 FROM base AS builder
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 
 # Copy package files
 COPY package*.json ./
 COPY server/package*.json ./server/
 
-# Install dependencies using npm install instead of npm ci to avoid lock file issues
-RUN npm install --only=production && npm cache clean --force
-RUN cd server && npm install --only=production && npm cache clean --force
+# Install ALL dependencies including dev dependencies for build process
+RUN npm install && npm cache clean --force
+RUN cd server && npm install && npm cache clean --force
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Verify vite is available and build the application
+RUN npx vite --version
 RUN npm run build
 
 # Production stage
@@ -68,12 +69,14 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy built application and dependencies from builder stage
+# Copy built application and server dependencies
 COPY --from=builder --chown=algofi:nodejs /app/dist ./dist
 COPY --from=builder --chown=algofi:nodejs /app/server ./server
 COPY --from=builder --chown=algofi:nodejs /app/package*.json ./
 COPY --from=builder --chown=algofi:nodejs /app/public ./public
-COPY --from=builder --chown=algofi:nodejs /app/node_modules ./node_modules
+
+# Install only production dependencies for the server
+RUN npm install --only=production && npm cache clean --force
 
 # Set environment variables
 ENV NODE_ENV=production

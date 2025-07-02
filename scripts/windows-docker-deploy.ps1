@@ -205,7 +205,11 @@ try {
     Write-ColorOutput "✅ Docker images built successfully" $SuccessColor
 } catch {
     Write-ColorOutput "❌ Failed to build Docker images: $_" $ErrorColor
-    Write-ColorOutput "Try running: docker system prune -f" $WarningColor
+    Write-ColorOutput "💡 Troubleshooting tips:" $WarningColor
+    Write-ColorOutput "   1. Try running: docker system prune -f" $WarningColor
+    Write-ColorOutput "   2. Check if all dependencies are in package.json" $WarningColor
+    Write-ColorOutput "   3. Ensure you have enough disk space" $WarningColor
+    Write-ColorOutput "   4. Check Docker Desktop logs for more details" $WarningColor
     exit 1
 }
 
@@ -309,7 +313,7 @@ Write-ColorOutput ""
 Write-ColorOutput "🔧 Windows-specific commands:" $InfoColor
 Write-ColorOutput "   📊 Resource usage: docker stats" $InfoColor
 Write-ColorOutput "   🧹 Clean up:       docker system prune -f" $InfoColor
-Write-ColorOutput "   🔍 Port check:     netstat -ano | findstr :3000" $InfoColor
+Write-ColorOutput "   🔍 Port check:     netstat -ano | findstr :3000" $WarningColor
 Write-ColorOutput ""
 
 # Open browser automatically (optional)
